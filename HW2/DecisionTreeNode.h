@@ -1,3 +1,11 @@
+/**
+* Author : Berk Takit
+* ID: 21803147
+* Section : 2
+* Assignment : 2
+*/
+
+
 #ifndef __DECISION_TREE_NODE
 #define __DECISION_TREE_NODE
 #include <cstddef>

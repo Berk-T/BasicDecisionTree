@@ -1,8 +1,16 @@
+/**
+* Author : Berk Takit
+* ID: 21803147
+* Section : 2
+* Assignment : 2
+*/
+
+
 #include "DecisionFunctions.h"
 #include <iostream>
 #include <cmath>
 
-
+// calculates the entropy for a given data set
 double calculateEntropy(const int* classCounts, const int numClasses) {
 	double entropy = 0.0;
 	int totalClasses = 0;
@@ -27,20 +35,17 @@ double calculateInformationGain(const bool** data, const int* labels,
 	const int numSamples, const int numFeatures, const bool* usedSamples,
 	const int featureId) {
 
-	//may optimize this further
 	int noOfClasses = 0;
 	int usedSize = 0;
-	int index = 0;
 	
 	for (int i = 0; i < numSamples; i++) {
 
-		//calculate number of different classes
+		//calculate number of different classes, not needed in this homework but offers
+		//flexibility
 		if (labels[i] > noOfClasses) noOfClasses = labels[i];
 
-		if (usedSamples[i]) {
-			index++;
-			usedSize++;
-		}
+		//calculate how many samples are used for this node
+		if (usedSamples[i]) usedSize++;
 	}
 
 	//initialize classCount for left right and parent

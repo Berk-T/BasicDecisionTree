@@ -1,19 +1,26 @@
+/**
+* Author : Berk Takit
+* ID: 21803147
+* Section : 2
+* Assignment : 2
+*/
+
 #include "DecisionTree.h"
 #include "DecisionFunctions.h"
 
+// creates an empty decisiontree and initializes the root node
 DecisionTree::DecisionTree() {
 	root = new DecisionTreeNode;
-	testedFeatures = NULL;
 }
 
+// deletes the tree starting from the root
 DecisionTree::~DecisionTree() {
 	if (root != NULL) {
 		deleteNode(root);
 	}
-
-	delete[] testedFeatures;
 }
 
+// deletes the specified node
 void DecisionTree::deleteNode(DecisionTreeNode* cur) {
 	if (cur == NULL) return;
 
@@ -25,7 +32,7 @@ void DecisionTree::deleteNode(DecisionTreeNode* cur) {
 	deleteNode(tmpRight);
 }
 
-
+// initializes the training data by parsing the given data set text file
 void DecisionTree::train(const string fileName, const int numSamples, const int numFeatures) {
 	ifstream inFile;
 	inFile.open(fileName);
@@ -59,11 +66,12 @@ void DecisionTree::train(const string fileName, const int numSamples, const int 
 	return;
 }
 
+// starts the tree building process
 void DecisionTree::train(const bool** data, const int* labels, const int numSamples, const
 	int numFeatures) {
 
 	bool* usedSamples = new bool[numSamples];
-	testedFeatures = new bool[numFeatures];
+	bool* testedFeatures = new bool[numFeatures];
 
 	for (int i = 0; i < numFeatures; i++) {
 		testedFeatures[i] = false;
@@ -73,21 +81,21 @@ void DecisionTree::train(const bool** data, const int* labels, const int numSamp
 		usedSamples[i] = true;
 	}
 
-	buildTree((const bool**)data, labels, numSamples, numFeatures, usedSamples, root);
-
-	cout << "finished training" << endl;
+	buildTree((const bool**)data, labels, numSamples, numFeatures, usedSamples, testedFeatures, root);
 
 	delete[] usedSamples;
+	delete[] testedFeatures;
 
 }
 
-
-//true left false right
+//recursively builds the tree by selecting the best feature to split by and splitting
+//the data accordingly. Creates a leaf node if there are no more decisions that are beneficial.
+//left branch is false & right branch is true
 void DecisionTree::buildTree(const bool** data, const int* labels, const int numSamples, const
-	int numFeatures, bool*& usedSamples, DecisionTreeNode* curNode) {
+	int numFeatures, bool*& usedSamples, bool*& testedFeatures, DecisionTreeNode* curNode) {
 
 	int featureIndex;
-	double gain = findBestSplit(data, labels, numSamples, numFeatures, usedSamples, featureIndex);
+	double gain = findBestSplit(data, labels, numSamples, numFeatures, usedSamples, testedFeatures, featureIndex);
 
 	if (featureIndex >= 0) testedFeatures[featureIndex] = true;
 
@@ -103,23 +111,34 @@ void DecisionTree::buildTree(const bool** data, const int* labels, const int num
 
 	splitData(data, numSamples, usedSamples, trueUsed, falseUsed, featureIndex);
 
+
+	bool* leftTested = new bool[numFeatures];
+	bool* rightTested = new bool[numFeatures];
+	for (int i = 0; i < numFeatures; i++) {
+		leftTested[i] = testedFeatures[i];
+		rightTested[i] = testedFeatures[i];
+	}
+
 	//build true branch
 	DecisionTreeNode* trueBranch = new DecisionTreeNode;
-	curNode->left = trueBranch;
-	buildTree(data, labels, numSamples, numFeatures, trueUsed, trueBranch);
+	curNode->right = trueBranch;
+	buildTree(data, labels, numSamples, numFeatures, trueUsed, rightTested, trueBranch);
 
 	//build false branch
 	DecisionTreeNode* falseBranch = new DecisionTreeNode;
-	curNode->right = falseBranch;
-	buildTree(data, labels, numSamples, numFeatures, falseUsed, falseBranch);
+	curNode->left = falseBranch;
+	buildTree(data, labels, numSamples, numFeatures, falseUsed, leftTested, falseBranch);
 
+	delete[] leftTested;
+	delete[] rightTested;
 	delete[] trueUsed;
 	delete[] falseUsed;
 	return;
 }
 
+//Finds the best feature to split the data by calculating information gain.
 double DecisionTree::findBestSplit(const bool** data, const int* labels, const int numSamples, const
-	int numFeatures, bool*& usedSamples, int& featureIndex) {
+	int numFeatures, bool*& usedSamples, bool*& testedFeatures, int& featureIndex) {
 
 	double bestGain = 0;
 	int bestFeatureIndex = -1;
@@ -139,6 +158,7 @@ double DecisionTree::findBestSplit(const bool** data, const int* labels, const i
 	return bestGain;
 }
 
+//Splits the data into two sets based on the feature
 void DecisionTree::splitData(const bool** data, int numSamples, bool*& usedSamples, 
 	bool*& trueUsed, bool*& falseUsed, int featureIndex) {
 	
@@ -164,6 +184,7 @@ void DecisionTree::splitData(const bool** data, int numSamples, bool*& usedSampl
 	return;
 }
 
+//Creates a leaf node that assigns a class
 void DecisionTree::createLeaf(DecisionTreeNode* node, const int numSamples, const bool* usedSamples, const int* labels) {
 	
 	node->isLeaf = true;
@@ -205,6 +226,7 @@ void DecisionTree::createLeaf(DecisionTreeNode* node, const int numSamples, cons
 	delete[]classCount;
 }
 
+//Creates a decision node
 void DecisionTree::createDecision(DecisionTreeNode* node, int featureIndex) {
 	if (node == root) {
 	}
@@ -212,20 +234,22 @@ void DecisionTree::createDecision(DecisionTreeNode* node, int featureIndex) {
 	node->nodeItem = featureIndex;
 }
 
+//predicts the class of a given sample using the trained decision tree
 int DecisionTree::predict(const bool* data) {
 	DecisionTreeNode* curNode = root;
 	while (!curNode->isLeaf) {
 		if (data[curNode->nodeItem]) {
-			curNode = curNode->left;
+			curNode = curNode->right;
 		}
 		else {
-			curNode = curNode->right;
+			curNode = curNode->left;
 		}
 	}
 
 	return curNode->nodeItem;
 }
 
+//Tests how accurate the decision tree is by testing all samples in a test set
 double DecisionTree::test(const bool** data, const int* labels, const int numSamples) {
 	int rightPredictions = 0;
 	this->print();
@@ -238,10 +262,13 @@ double DecisionTree::test(const bool** data, const int* labels, const int numSam
 	return rightPredictions / (double)numSamples;
 }
 
+//Starts the recursive printing function
 void DecisionTree::print() {
+	cout << "Decision Tree:" << endl;
 	print(root, 0);
 }
 
+//Recursively prints the decision tree by preorder traversal, tabs represent levels
 void DecisionTree::print(DecisionTreeNode* cur, int level) {
 
 	if (cur == NULL) return;
@@ -255,6 +282,7 @@ void DecisionTree::print(DecisionTreeNode* cur, int level) {
 	print(cur->left, level);
 	print(cur->right, level);
 }
+
 
 int main() {
 	DecisionTree t;
